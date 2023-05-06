@@ -2,9 +2,10 @@
 
 namespace Drupal\ndtv_migration\Commands;
 
-use Drupal\Core\Datetime\DateFormatter;
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\node\NodeInterface;
 use Drupal\taxonomy\Entity\Term;
 use Drush\Commands\DrushCommands;
 
@@ -21,51 +22,41 @@ class MigrationCommand extends DrushCommands {
   protected $entityTypeManager;
 
   /**
-   * A DateFormatter instance.
+   * A Database instance.
    *
-   * @var \Drupal\Core\Datetime\DateFormatter
+   * @var \Drupal\Core\Database\Connection
    */
-  protected $dateFormatter;
-
-  /**
-   * A FileSystem instance.
-   *
-   * @var \Drupal\Core\File\FileSystemInterface
-   */
-  protected $fileSystem;
+  protected $connection;
 
   /**
    * Constructs a Drupal\ndtv_migration\Commands\MigrationCommand object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManager $entityTypeManager
    *   A entity manager instance.
-   * @param \Drupal\Core\Datetime\DateFormatter $dateFormatter
-   *   A date formatter instance.
-   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
-   *   A file system instance.
+   * @param \Drupal\Core\Database\Connection $connection
+   *   A database instance.
    */
   public function __construct(
     EntityTypeManager $entityTypeManager,
-    DateFormatter $dateFormatter,
-    FileSystemInterface $fileSystem,
+    Connection $connection
   ) {
     $this->entityTypeManager = $entityTypeManager;
-    $this->dateFormatter = $dateFormatter;
-    $this->fileSystem = $fileSystem;
+    $this->connection = $connection;
   }
 
   /**
    * XML migration.
    *
-   * @command xml:migration
-   * @alias xml-migration
-   *
    * @param string $url
    *   The xml url.
+   *
+   * @command xml:migration
+   * @alias xml-migration
    */
   public function migration($url) {
     $xml = simplexml_load_file($url);
-    foreach ($xml->channel->item as $key => $value) {
+    $i = $j = 0;
+    foreach ($xml->channel->item as $value) {
       $date = new \DateTime($value->pubDate);
       $pubDate = $date->format('U');
       $image_url = $value->children("media", TRUE)->content->attributes()['url']->__toString();
@@ -76,6 +67,7 @@ class MigrationCommand extends DrushCommands {
       $source = $this->addUpdateTerm(array_shift($source_data), 'tags');
       $category = $this->addUpdateTerm(array_pop($source_data), 'tags');
       $combined = array_merge($source, $category);
+      $node_data = $this->checkExistingContent($value->title->__toString());
       $nodeObject = [
         "type" => 'article',
         "status" => 1,
@@ -93,12 +85,23 @@ class MigrationCommand extends DrushCommands {
         "field_image" => $file,
         "field_tags" => $combined,
       ];
-      $node = $this->entityTypeManager->getStorage('node');
-      $nodeDetails = $node->create($nodeObject);
-      $nodeDetails->save();
-      $title_array[$key] = $value->title;
+      if ($node_data instanceof NodeInterface) {
+        // Update Node.
+      }
+      else {
+        $node = $this->entityTypeManager->getStorage('node');
+        $nodeDetails = $node->create($nodeObject);
+        $nodeDetails->save();
+        $j++;
+      }
+      $title_array[$i] = $value->title->__toString();
+      $i++;
     }
-    $this->output()->writeln(array_shift($source_data));
+    $delete_count = 0;
+    if (!empty($title_array)) {
+      $delete_count = $this->deleteExistingPost($title_array);
+    }
+    $this->output()->writeln($j . ' migration completed out of ' . count($xml->channel->item) . ' and ' . $delete_count . ' existing nodes deleted.');
   }
 
   /**
@@ -123,6 +126,40 @@ class MigrationCommand extends DrushCommands {
       $source[] = $new_term->id();
     }
     return $source;
+  }
+
+  /**
+   * Check content exists or not.
+   */
+  public function checkExistingContent($title) {
+    $node = $this->entityTypeManager->getStorage('node')->loadByProperties([
+      'type' => 'article',
+      'title' => $title,
+    ]);
+    if (empty($node)) {
+      return FALSE;
+    }
+    else {
+      return reset($node);
+    }
+  }
+
+  /**
+   * Delete existing post.
+   */
+  public function deleteExistingPost($title) {
+    $query = $this->connection->select('node_field_data', 'nfd');
+    $query->fields('nfd', ['nid']);
+    $query->condition('nfd.type', 'article');
+    $query->condition('nfd.title', $title, 'NOT IN');
+    $res = $query->execute()->fetchAllKeyed(0, 0);
+    if (!empty($res)) {
+      foreach ($res as $node_id) {
+        $node = $this->entityTypeManager->getStorage('node')->load($node_id);
+        $node->delete();
+      }
+    }
+    return count($res);
   }
 
 }
