@@ -1,0 +1,19 @@
+uuid: 9299aee2-4916-42a3-96e9-0707b40b5722
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_guid
+    - node.type.article
+id: node.article.field_guid
+field_name: field_guid
+entity_type: node
+bundle: article
+label: guid
+description: ''
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

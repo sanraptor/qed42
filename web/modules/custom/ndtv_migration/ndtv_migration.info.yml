@@ -1,0 +1,4 @@
+name: ndtv migration
+description: XML migration
+type: module
+core_version_requirement: ^9

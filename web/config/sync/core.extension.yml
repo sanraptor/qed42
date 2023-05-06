@@ -28,10 +28,8 @@ module:
   link: 0
   menu_link_content: 0
   menu_ui: 0
-  migrate: 0
-  migrate_drupal: 0
-  migrate_drupal_ui: 0
   mysql: 0
+  ndtv_migration: 0
   node: 0
   options: 0
   page_cache: 0

@@ -1,0 +1,9 @@
+services:
+  ndtv_migration.commands:
+    class: Drupal\ndtv_migration\Commands\MigrationCommand
+    arguments:
+      - "@entity_type.manager"
+      - "@date.formatter"
+      - "@file_system"
+    tags:
+      - { name: drush.command }
