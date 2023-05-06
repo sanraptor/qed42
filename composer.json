@@ -16,9 +16,11 @@
     ],
     "require": {
         "composer/installers": "^1.9",
+        "drupal/admin_toolbar": "^3.3",
         "drupal/core-composer-scaffold": "^9.5",
         "drupal/core-project-message": "^9.5",
         "drupal/core-recommended": "^9.5",
+        "drupal/devel": "^5.1",
         "drush/drush": "^11.5"
     },
     "conflict": {
@@ -91,5 +93,8 @@
                 "      composer remove drupal/core-project-message"
             ]
         }
+    },
+    "require-dev": {
+        "kint-php/kint": "^5.0"
     }
 }
