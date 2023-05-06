@@ -16,7 +16,9 @@
     ],
     "require": {
         "composer/installers": "^1.9",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
         "drupal/admin_toolbar": "^3.3",
+        "drupal/coder": "^8.3",
         "drupal/core-composer-scaffold": "^9.5",
         "drupal/core-project-message": "^9.5",
         "drupal/core-recommended": "^9.5",
